@@ -1,6 +1,16 @@
 from django.db import models
+from djangobulk.bulk import insert_many, update_many
 from django.utils.translation import ugettext_lazy as _
 from timedelta.fields import TimedeltaField
+
+
+class CallDetailRecordManager(models.Manager):
+
+    def insert_many(self, records):
+        insert_many(CallDetailRecord, records)
+
+    def update_many(self, records):
+        update_many(CallDetailRecord, records)
 
 
 class CallDetailRecord(models.Model):
@@ -18,6 +28,8 @@ class CallDetailRecord(models.Model):
     start = models.DateTimeField(verbose_name=_("Call start time"))
     duration = TimedeltaField(
             verbose_name=_("Duration of call"))
+
+    objects = CallDetailRecordManager()
 
     def __unicode__(self):
         return "%s -> %s, status:%s, time: %s, dur: %s" % (
