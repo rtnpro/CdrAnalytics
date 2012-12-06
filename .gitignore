@@ -9,7 +9,7 @@ TODO
 docs/_build
 docs/html
 build-tools/*.rpm
-*settings-local.py
+*local.py
 .installed.cfg
 bin
 build
