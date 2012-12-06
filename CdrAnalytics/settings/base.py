@@ -109,6 +109,7 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
     'timedelta',
     'djangobulk',
+    'CdrAnalytics.cdr',
 )
 
 # A sample logging configuration. The only tangible logging
