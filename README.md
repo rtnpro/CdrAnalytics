@@ -1,0 +1,1 @@
+A django app to generate analytics for call detail records.
