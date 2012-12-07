@@ -41,8 +41,9 @@ class CallDetailRecord(models.Model):
             ("NR", "No ring"),
     )
     status = models.CharField(max_length=2, choices=STATUS_CHOICES,
-            verbose_name=_("Call status"))
-    start = models.DateTimeField(verbose_name=_("Call start time"))
+            verbose_name=_("Call status"), db_index=True)
+    start = models.DateTimeField(verbose_name=_("Call start time"),
+        db_index=True)
     duration = TimedeltaField(
             verbose_name=_("Duration of call"))
 
@@ -76,7 +77,7 @@ def index_max_con_call_count_per_hour():
 
 
 class MaxConCallCountPerHour(models.Model):
-    hour = models.DateTimeField()
+    hour = models.DateTimeField(db_index=True)
     max_con_count = models.IntegerField()
 
     def __unicode__(self):
