@@ -7,18 +7,25 @@ from django.db.models import F
 from django.db.models import Max, Min
 
 
+class TempCallDetailRecord(models.Model):
+    start = models.DateTimeField(db_index=True)
+    end = models.DateTimeField(db_index=True)
+
+
 class CallDetailRecordManager(models.Manager):
 
-    def insert_many(self, records):
-        insert_many(CallDetailRecord, records)
-
-    def update_many(self, records):
-        update_many(CallDetailRecord, records)
-
     def concurrent_calls_count_at_time(self, t):
-        return self.filter(start__gte=t - F('duration'), start__lt=t).count()
+        return TempCallDetailRecord.objects.filter(
+                end__gte=t, start__lt=t).count()
 
     def get_max_concurrent_calls_for_an_hour(self, h):
+        TempCallDetailRecord.objects.all().delete()
+        TempCallDetailRecord.objects.bulk_create([
+            TempCallDetailRecord(start=i['start'],
+                end=i['start'] + i['duration']
+            ) for i in self.filter(start__gte=h - timedelta(hours=1),
+                start__lt=h).values('start', 'duration').iterator()
+        ])
         lb = h - timedelta(hours=1)
         return max([self.concurrent_calls_count_at_time(t)
             for t in set([lb] + [
@@ -66,13 +73,27 @@ def to_roof(t, always=False):
     return t
 
 
-def index_max_con_call_count_per_hour():
-    lb = to_roof(MaxConCallCountPerHour.objects.aggregate(lb=Max('hour'))['lb'] or \
-            CallDetailRecord.objects.aggregate(lb=Min('start'))['lb'], True)
-    ub = to_roof(CallDetailRecord.objects.aggregate(ub=Max('start'))['ub'])
+def index_max_con_call_count_per_hour(lb=None, ub=None):
+    lb += timedelta(hours=1)
+    if not lb:
+        lb = to_roof(MaxConCallCountPerHour.objects.aggregate(
+                lb=Max('hour'))['lb'] or \
+                CallDetailRecord.objects.aggregate(
+                    lb=Min('start')
+                )['lb'], True
+              )
+    if not ub:
+        ub = to_roof(
+                CallDetailRecord.objects.aggregate(
+                    ub=Max('start')
+                )['ub']
+             )
     while lb <= ub:
         max_count = CallDetailRecord.objects.get_max_concurrent_calls_for_an_hour(lb)
-        MaxConCallCountPerHour.objects.create(hour=lb, max_con_count=max_count)
+        m, created = MaxConCallCountPerHour.objects.get_or_create(
+                hour=lb, defaults={'max_con_count':max_count})
+        if not created:
+            m.update(max_con_count=max_count)
         lb += timedelta(hours=1)
 
 
