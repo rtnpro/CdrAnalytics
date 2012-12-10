@@ -3,7 +3,8 @@ from django.db import models
 from djangobulk.bulk import insert_many, update_many
 from django.utils.translation import ugettext_lazy as _
 from timedelta.fields import TimedeltaField
-from django.db.models import F, Q, Max, Min
+from django.db.models import F, Q, Max, Min, Count, Sum
+from django.conf import settings
 
 
 class TempCallDetailRecord(models.Model):
@@ -46,6 +47,51 @@ class CallDetailRecordManager(models.Manager):
             if cur_count > max_count:
                 max_count = cur_count
         return max_count
+
+    def index_call_stats_for_time_t(self, t, delta=timedelta(hours=1)):
+        d = datetime.now()
+        q = CallStatus.objects.filter(time=t)
+        call_status = q and q[0] or \
+                CallStatus(time=t)
+        q = self.filter(start__lt=t, start__gt=t - F('duration')).values(
+                'status')
+        call_status.existing_status_na = q.filter(status='NA').count()
+        call_status.existing_status_an = q.filter(status='AN').count()
+        call_status.existing_status_nr = q.filter(status='NR').count()
+        q = self.filter(start__gte=t, start__lt=t + delta).values('status')
+        call_status.status_na = q.filter(status='NA').count()
+        call_status.status_nr = q.filter(status='NR').count()
+        call_status.status_an = q.filter(status='AN').count()
+        call_status.save()
+        print "Calculated call status for time %s in %d seconds: %s" % (
+                t, (datetime.now() - d).seconds, call_status)
+
+    def index_call_stats(self, lb, ub):
+        delta = timedelta(seconds=settings.CALL_STATS_CALC_PERIOD)
+        t = lb
+        while t < ub:
+            self.index_call_stats_for_time_t(t, delta=delta)
+            t += delta
+
+    def get_status_counts(self, lb, ub):
+        qs = CallStatus.objects.filter(time__gte=lb, time__lt=ub).order_by('time')
+        status_count_dict = qs.aggregate(na=Sum('status_na'), an=Sum('status_an'), nr=Sum('status_nr'))
+        existing_status_count_dict = {}
+        if qs:
+            cs0 = qs[0]
+            existing_status_count_dict = {
+                    'na': cs0.existing_status_na,
+                    'an': cs0.existing_status_an,
+                    'nr': cs0.existing_status_nr
+                }
+        return {
+            'na': existing_status_count_dict.get('na', 0) + \
+                    status_count_dict.get('na', 0),
+            'an': existing_status_count_dict.get('an', 0) + \
+                    status_count_dict.get('an', 0),
+            'nr': existing_status_count_dict.get('nr', 0) + \
+                    status_count_dict.get('nr', 0),
+        }
 
 
 class CallDetailRecord(models.Model):
@@ -116,3 +162,21 @@ class MaxConCallCountPerHour(models.Model):
 
     def __unicode__(self):
         return "hour: %s max_con_calls: %s" % (self.hour, self.max_con_count)
+
+
+class CallStatus(models.Model):
+    time = models.DateTimeField(db_index=True)
+    # status counts for new calls
+    status_na = models.IntegerField()
+    status_nr = models.IntegerField()
+    status_an = models.IntegerField()
+    # status counts for existing calls
+    existing_status_na = models.IntegerField()
+    existing_status_nr = models.IntegerField()
+    existing_status_an = models.IntegerField()
+
+    def __unicode__(self):
+        return "%s, NA: %d, AN: %d, NR: %d" % (
+                self.time, self.status_na, self.status_an,
+                self.status_nr
+            )
