@@ -26,11 +26,10 @@ class CallDetailRecordManager(models.Manager):
             ) for i in self.filter(start__gte=h - timedelta(hours=1),
                 start__lt=h).values('start', 'duration').iterator()
         ])
-        lb = h - timedelta(hours=1)
         return max([self.concurrent_calls_count_at_time(t)
-            for t in set([lb] + [
+            for t in set([h] + [
                     i[0] for i in self.filter(
-                    start__gt=lb, start__lt=h
+                    start__gte=h, start__lt=h + timedelta(hours=1)
                     ).distinct('start').values_list('start')
                 ]
             )
@@ -74,7 +73,6 @@ def to_roof(t, always=False):
 
 
 def index_max_con_call_count_per_hour(lb=None, ub=None):
-    lb += timedelta(hours=1)
     if not lb:
         lb = to_roof(MaxConCallCountPerHour.objects.aggregate(
                 lb=Max('hour'))['lb'] or \
@@ -94,6 +92,7 @@ def index_max_con_call_count_per_hour(lb=None, ub=None):
                 hour=lb, defaults={'max_con_count':max_count})
         if not created:
             m.update(max_con_count=max_count)
+        print lb
         lb += timedelta(hours=1)
 
 
