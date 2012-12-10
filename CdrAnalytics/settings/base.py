@@ -113,6 +113,10 @@ INSTALLED_APPS = (
     'CdrAnalytics.cdr',
 )
 
+# Mongo db settings
+MONGO_DB_NAME = 'cdr_analytics'
+MONGO_COLLECTION_NAME = 'cdr_collection'
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error when DEBUG=False.

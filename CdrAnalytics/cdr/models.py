@@ -5,6 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from timedelta.fields import TimedeltaField
 from django.db.models import F
 from django.db.models import Max, Min
+from django.conf import settings
 
 
 class TempCallDetailRecord(models.Model):
@@ -14,27 +15,29 @@ class TempCallDetailRecord(models.Model):
 
 class CallDetailRecordManager(models.Manager):
 
-    def concurrent_calls_count_at_time(self, t):
-        return TempCallDetailRecord.objects.filter(
-                end__gte=t, start__lt=t).count()
+    def concurrent_calls_count_at_time(self, t, collection, count=0, initial=False):
+        if initial:
+            return collection.find({'end': {'$gt': t},
+                'start': {'$lte': t}}).count()
+        start_count = collection.find({'start': t}).count()
+        end_count = collection.find({'end': t}).count()
+        count += start_count - end_count
+        return count
 
     def get_max_concurrent_calls_for_an_hour(self, h):
-        TempCallDetailRecord.objects.all().delete()
-        TempCallDetailRecord.objects.bulk_create([
-            TempCallDetailRecord(start=i['start'],
-                end=i['start'] + i['duration']
-            ) for i in self.filter(start__gte=h - timedelta(hours=1),
-                start__lt=h).values('start', 'duration').iterator()
-        ])
+        from pymongo import Connection
+        c = Connection()
+        db = getattr(c, settings.MONGO_DB_NAME)
+        collection = getattr(db, settings.MONGO_COLLECTION_NAME)
+
         lb = h - timedelta(hours=1)
-        return max([self.concurrent_calls_count_at_time(t)
-            for t in set([lb] + [
-                    i[0] for i in self.filter(
-                    start__gt=lb, start__lt=h
-                    ).distinct('start').values_list('start')
-                ]
-            )
-        ])
+        max_count = cur_call_count = self.concurrent_calls_count_at_time(
+                lb, collection, initial=True)
+        for i in range(3600):
+            t = lb + timedelta(seconds=i)
+            cur_call_count = self.concurrent_calls_count_at_time(t, collection, count=cur_call_count)
+            max_count = cur_call_count if cur_call_count > max_count else max_counta
+        return max_count
 
 
 class CallDetailRecord(models.Model):
@@ -95,6 +98,37 @@ def index_max_con_call_count_per_hour(lb=None, ub=None):
         if not created:
             m.update(max_con_count=max_count)
         lb += timedelta(hours=1)
+
+
+def insert_cdrs_to_mongo(db, start, to, cdrs=[]):
+    print start, to
+    count = 0
+    collection = db.cdr_collection
+    for i in CallDetailRecord.objects.filter(start__gte=start, start__lt=to).values().iterator():
+        if count == 500:
+            collection.insert(cdrs)
+            count = 0
+            del cdrs; cdrs = []
+        i.update({'end': i['start'] + i['duration']})
+        i.pop('duration')
+        #print i
+        cdrs.append(i)
+        count += 1
+    if count > 0:
+        collection.insert(cdrs)
+    del cdrs
+
+def cacherecords(start, end):
+    from pymongo import Connection
+    connection = Connection()
+    db = connection.cdr_analytics
+    diff_hours = (end - start).days * 24
+    to = start
+    for d in range(diff_hours):
+        to = start + timedelta(hours=d + 1)
+        insert_cdrs_to_mongo(db, to - timedelta(hours=1), to)
+    if to < end:
+        insert_cdrs_to_mongo(db, to , end)
 
 
 class MaxConCallCountPerHour(models.Model):
