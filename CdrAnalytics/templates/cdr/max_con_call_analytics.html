@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block js %}
+<script type="text/javascript" src="{% static "plugins/jqplot/jquery.jqplot.min.js" %}"></script>
+<script type="text/javascript" src="{% static "plugins/jqplot/plugins/jqplot.dateAxisRenderer.min.js" %}"></script>
+<script type="text/javascript" src="{% static "plugins/jqplot/plugins/jqplot.canvasTextRenderer.min.js" %}"></script>
+<script type="text/javascript" src="{% static "plugins/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js" %}"></script>
+<script type="text/javascript" src="{% static "plugins/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js" %}"></script>
+<script type="text/javascript" src="{% static "plugins/jqplot/plugins/jqplot.highlighter.min.js" %}"></script>
+<script type="text/javascript" charset="utf-8">
+  $(function(){
+      $('#date-range-form').submit(function(e){
+          e.preventDefault();
+          $(this).unbind('submit');
+          var options = {
+            success: function(data){
+                $('#charts').children().remove();
+                var l = new Array();
+                $(data.plots).each(function(index, value){
+                    l.push([value[0], value[1]]);
+                    });
+                $.jqplot('charts', [l], {
+                    title: "Max concurrent calls per hour"
+                    axes: {
+                        xaxis: {
+                            renderer: $.jqplot.DateAxisRenderer,
+                            tickOptions:{
+                                formatString:'%b %#d, %Y %I%p',
+                                angle: -30
+                            },
+                            min: data.min_date,
+                            max: data.max_date,
+                            tickInterval: "1 day",
+                        }
+                    },
+                    highlighter: {
+                        show: true,
+                        sizeAdjust: 7.5,
+                    },
+                    cursor: {show: false}
+                 });
+            }
+          };
+          $(this).ajaxForm(options).submit();
+      });
+   });
+</script>
+{% endblock %}
+
+{% block content_main %}
+<div id="form-container">
+  <form id="date-range-form" action="" method="post" accept-charset="utf-8">
+    {% csrf_token %}
+    <fieldset>
+      <div id="from_date_field_container">
+        <label>From: </label>{{ form.from_date }}
+      </div>
+      <div id="to_date_field_container">
+        <label>To: </label>{{ form.to_date }}
+      </div>
+    </fieldset>
+    <p><input type="submit" value="Continue &rarr;"></p>
+  </form>
+</div>
+<div id="charts" style="height:500px;">
+</div>
+{% endblock %}
