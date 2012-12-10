@@ -21,10 +21,11 @@
                     l.push([value[0], value[1]]);
                     });
                 $.jqplot('charts', [l], {
-                    title: "Max concurrent calls per hour"
+                    title: "Max concurrent calls per hour",
                     axes: {
                         xaxis: {
                             renderer: $.jqplot.DateAxisRenderer,
+                            tickRenderer: $.jqplot.CanvasAxisTickRenderer,
                             tickOptions:{
                                 formatString:'%b %#d, %Y %I%p',
                                 angle: -30
