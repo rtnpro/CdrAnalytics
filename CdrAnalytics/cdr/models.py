@@ -141,7 +141,8 @@ class CallDetailRecordManager(models.Manager):
             m, created = MaxConCallCountPerHour.objects.get_or_create(
                     hour=lb, defaults={'max_con_count':max_count})
             if not created:
-                m.update(max_con_count=max_count)
+                m.max_con_count = max_count
+                m.save()
             print "Calculated max concurrent call count for %s in %d seconds: %d" % (
                     lb, (datetime.now() - d).seconds, max_count)
             lb += timedelta(hours=1)
