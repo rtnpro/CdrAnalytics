@@ -85,8 +85,8 @@ class CallDetailRecordManager(models.Manager):
         print "Calculated call status for time %s in %d seconds: %s" % (
                 t, (datetime.now() - d).seconds, call_status)
 
-    def index_call_stats(self, lb, ub):
-        delta = timedelta(seconds=settings.CALL_STATS_CALC_PERIOD)
+    def index_call_stats(self, lb, ub, interval=None):
+        delta = timedelta(seconds=interval or settings.CALL_STATS_CALC_PERIOD)
         t = lb
         while t < ub:
             self.index_call_stats_for_time_t(t, delta=delta)
