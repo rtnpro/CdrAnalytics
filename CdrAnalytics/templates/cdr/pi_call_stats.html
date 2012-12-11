@@ -1,0 +1,54 @@
+{% extends "cdr/max_con_call_analytics.html" %}
+{% load staticfiles %}
+{% block js %}
+<script type="text/javascript" src="{% static "plugins/jqplot/jquery.jqplot.min.js" %}"></script>
+<script type="text/javascript" src="{% static "plugins/jqplot/plugins/jqplot.pieRenderer.min.js" %}"></script>
+<script type="text/javascript" charset="utf-8">
+  $(function(){
+      $('#date-time-range-form').submit(function(e){
+          e.preventDefault();
+          $(this).unbind('submit');
+          var options = {
+            success: function(data){
+              $('#charts').children().remove();
+                var l = new Array();
+                $(data).each(function(index, value){
+                  l.push([value.type, value.count]);
+                });
+                $.jqplot('charts', [l], {
+                    title: "Call status count",
+                    seriesDefaults: {
+                      renderer: jQuery.jqplot.PieRenderer,
+                      rendererOptions: {
+                        showDataLabels: true,
+                        dataLabels: "value"
+                      }
+                    },
+                    legend: { show: true, location: 'e'}
+                 });
+            }
+          };
+          $(this).ajaxForm(options).submit();
+      });
+   });
+</script>
+{% endblock %}
+
+{% block content_main %}
+<div id="form-container">
+  <form id="date-time-range-form" action="" method="post" accept-charset="utf-8">
+    {% csrf_token %}
+    <fieldset>
+      <div id="from_date_field_container">
+        <label>From: </label>{{ form.from_time }}
+      </div>
+      <div id="to_date_field_container">
+        <label>To: </label>{{ form.to_time }}
+      </div>
+    </fieldset>
+    <p><input type="submit" value="Continue &rarr;"></p>
+  </form>
+</div>
+<div id="charts" style="height:500px;">
+</div>
+{% endblock %}

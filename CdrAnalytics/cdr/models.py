@@ -84,14 +84,23 @@ class CallDetailRecordManager(models.Manager):
                     'an': cs0.existing_status_an,
                     'nr': cs0.existing_status_nr
                 }
-        return {
-            'na': existing_status_count_dict.get('na', 0) + \
-                    status_count_dict.get('na', 0),
-            'an': existing_status_count_dict.get('an', 0) + \
-                    status_count_dict.get('an', 0),
-            'nr': existing_status_count_dict.get('nr', 0) + \
-                    status_count_dict.get('nr', 0),
-        }
+        return [
+            {
+                'type': 'Not answered',
+                'count': existing_status_count_dict.get('na', 0) + \
+                    (status_count_dict.get('na') or 0)
+            },
+            {
+                'type': 'Answered',
+                'count': existing_status_count_dict.get('an', 0) + \
+                    (status_count_dict.get('an') or 0)
+            },
+            {
+                'type': 'No ring',
+                'count': existing_status_count_dict.get('nr', 0) + \
+                    (status_count_dict.get('nr') or 0)
+            }
+        ]
 
 
 class CallDetailRecord(models.Model):

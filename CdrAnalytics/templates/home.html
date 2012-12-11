@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content_main %}
+<h1 id="title-message">Welcome to CdrAnalytics!</h1>
+<div id="analytics">
+  <ul>
+    <li><a href="{% url max_con_call_analytics %}">Maximum concurrent call counts per hour analytics</a></li>
+    <li><a href="{% url pi_call_stats_analytics %}">Call status analytics</a></li>
+  </ul>
+</div>
+{% endblock %}
