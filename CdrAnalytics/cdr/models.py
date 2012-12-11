@@ -177,7 +177,7 @@ class CallDetailRecord(models.Model):
 
 
 class MaxConCallCountPerHour(models.Model):
-    hour = models.DateTimeField(db_index=True)
+    hour = models.DateTimeField(db_index=True, primary_key=True)
     max_con_count = models.IntegerField()
 
     def __unicode__(self):
@@ -185,7 +185,7 @@ class MaxConCallCountPerHour(models.Model):
 
 
 class CallStatus(models.Model):
-    time = models.DateTimeField(db_index=True)
+    time = models.DateTimeField(db_index=True, primary_key=True)
     # status counts for new calls
     status_na = models.IntegerField()
     status_nr = models.IntegerField()
