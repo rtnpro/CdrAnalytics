@@ -53,15 +53,34 @@ class CallDetailRecordManager(models.Manager):
         q = CallStatus.objects.filter(time=t)
         call_status = q and q[0] or \
                 CallStatus(time=t)
+        default_call_status_attrs = {
+                    'status_na': 0, 'status_an': 0,
+                    'status_nr': 0, 'existing_status_na': 0,
+                    'existing_status_nr': 0, 'existing_status_an': 0
+                    }
+        call_status, created = CallStatus.objects.get_or_create(
+                time=t, defaults=default_call_status_attrs
+                )
+        if not created:
+            [setattr(call_status, attr, value)
+                    for attr, value in default_call_status_attrs.items()]
+        q = self.filter(start__gte=t, start__lt=t + delta).values('status')
+        for cdr in q.iterator():
+            if cdr.get('status') == 'NA':
+                call_status.status_na += 1
+            elif cdr.get('status') == 'AN':
+                call_status.status_an += 1
+            elif cdr.get('status') == 'NR':
+                call_status.status_nr += 1
         q = self.filter(start__lt=t, start__gt=t - F('duration')).values(
                 'status')
-        call_status.existing_status_na = q.filter(status='NA').count()
-        call_status.existing_status_an = q.filter(status='AN').count()
-        call_status.existing_status_nr = q.filter(status='NR').count()
-        q = self.filter(start__gte=t, start__lt=t + delta).values('status')
-        call_status.status_na = q.filter(status='NA').count()
-        call_status.status_nr = q.filter(status='NR').count()
-        call_status.status_an = q.filter(status='AN').count()
+        for cdr in q.iterator():
+            if cdr.get('status') == 'NA':
+                call_status.existing_status_na += 1
+            elif cdr.get('status') == 'AN':
+                call_status.existing_status_an += 1
+            elif cdr.get('status') == 'NR':
+                call_status.existing_status_nr += 1
         call_status.save()
         print "Calculated call status for time %s in %d seconds: %s" % (
                 t, (datetime.now() - d).seconds, call_status)
@@ -74,8 +93,10 @@ class CallDetailRecordManager(models.Manager):
             t += delta
 
     def get_status_counts(self, lb, ub):
-        qs = CallStatus.objects.filter(time__gte=lb, time__lt=ub).order_by('time')
-        status_count_dict = qs.aggregate(na=Sum('status_na'), an=Sum('status_an'), nr=Sum('status_nr'))
+        qs = CallStatus.objects.filter(
+                time__gte=lb, time__lt=ub).order_by('time')
+        status_count_dict = qs.aggregate(
+                na=Sum('status_na'), an=Sum('status_an'), nr=Sum('status_nr'))
         existing_status_count_dict = {}
         if qs:
             cs0 = qs[0]
