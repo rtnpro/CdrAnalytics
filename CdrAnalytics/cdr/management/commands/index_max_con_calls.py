@@ -28,7 +28,7 @@ class Command(BaseCommand):
         from_time_str = options.get('from', '').strip() or None
         to_time_str = options.get('to', '').strip() or None
         if from_time_str:
-            lb = datetime.strptime(to_time_str, '%m/%d/%Y %H')
+            lb = datetime.strptime(from_time_str, '%m/%d/%Y %H')
         else:
             last_indexed_hour = MaxConCallCountPerHour.objects.aggregate(
                     max=Max('hour'))['max']

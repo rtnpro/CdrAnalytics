@@ -34,7 +34,7 @@ class Command(BaseCommand):
         interval = int(options.get('interval', '0')) or settings.CALL_STATS_CALC_PERIOD
         time_delta = timedelta(seconds=interval)
         if from_time_str:
-            lb = datetime.strptime(to_time_str, '%m/%d/%Y %H')
+            lb = datetime.strptime(from_time_str, '%m/%d/%Y %H')
         else:
             last_index = CallStatus.objects.aggregate(max=Max('time'))['max']
             if last_index:
