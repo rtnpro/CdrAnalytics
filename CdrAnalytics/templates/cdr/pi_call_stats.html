@@ -5,45 +5,68 @@
 <script type="text/javascript" src="{% static "plugins/jqplot/plugins/jqplot.pieRenderer.min.js" %}"></script>
 <script type="text/javascript" charset="utf-8">
   $(function(){
-      $('#date-time-range-form').submit(function(e){
-          e.preventDefault();
-          $(this).unbind('submit');
-          var options = {
-            success: function(data){
-              $('#charts').children().remove();
-                var l = new Array();
-                $(data).each(function(index, value){
-                  l.push([value.type, value.count]);
-                });
-                $.jqplot('charts', [l], {
-                    title: "Call status count",
-                    seriesDefaults: {
-                      renderer: jQuery.jqplot.PieRenderer,
-                      rendererOptions: {
-                        showDataLabels: true,
-                        dataLabels: "value"
-                      }
-                    },
-                    legend: { show: true, location: 'e'}
-                 });
-            }
-          };
-          $(this).ajaxForm(options).submit();
-      });
+    function formSubmitHandler(e){
+      e.preventDefault();
+      $(this).unbind('submit');
+      var options = {
+        success: function(data){
+          var isJSON = true;
+          try {
+            $.parseJSON(data);
+          } catch (err) {
+            isJSON = false;
+          }
+          if (!isJSON){
+            $('#form-container').replaceWith($(data).find('#form-container'));
+            $('#date-time-range-form').submit(formSubmitHandler);
+            return;
+          }
+          $('.errorlist').remove();
+          $('#charts').children().remove();
+            var l = new Array();
+            var total_calls = 0;
+            $(data).each(function(index, value){
+                l.push([value.type, value.count]);
+                total_calls += value.count;
+            });
+            var title = "Call status counts";
+            if (total_calls == 0)
+                title = "No call status count found";
+            $.jqplot('charts', [l], {
+                title: title,
+                seriesDefaults: {
+                  renderer: jQuery.jqplot.PieRenderer,
+                  rendererOptions: {
+                    showDataLabels: true,
+                    dataLabels: "value"
+                  }
+                },
+                legend: { show: true, location: 'e'}
+             });
+          }
+        };
+        $(this).ajaxForm(options).submit();
+      }
+      $('#date-time-range-form').submit(formSubmitHandler);
    });
 </script>
 {% endblock %}
 
 {% block content_main %}
+<h1>Call status count anlaytics</h1>
 <div id="form-container">
   <form id="date-time-range-form" action="" method="post" accept-charset="utf-8">
     {% csrf_token %}
+    <p>Please enter a "from" and "to" time in "MM/DD/YYYY hh:mm" format to see call status counts in the time selected time frame</p>
     <fieldset>
+      {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
       <div id="from_date_field_container">
         <label>From: </label>{{ form.from_time }}
+        {% if form.errors.from_time %}{{ form.errors.from_time }}{% endif %}
       </div>
       <div id="to_date_field_container">
         <label>To: </label>{{ form.to_time }}
+        {% if form.errors.to_time %}{{ form.errors.to_time }}{% endif %}
       </div>
     </fieldset>
     <p><input type="submit" value="Continue &rarr;"></p>

@@ -10,55 +10,73 @@
 <script type="text/javascript" src="{% static "plugins/jqplot/plugins/jqplot.highlighter.min.js" %}"></script>
 <script type="text/javascript" charset="utf-8">
   $(function(){
-      $('#date-range-form').submit(function(e){
-          e.preventDefault();
-          $(this).unbind('submit');
-          var options = {
-            success: function(data){
-                $('#charts').children().remove();
-                var l = new Array();
-                $(data.plots).each(function(index, value){
-                    l.push([value[0], value[1]]);
-                    });
-                $.jqplot('charts', [l], {
-                    title: "Max concurrent calls per hour",
-                    axes: {
-                        xaxis: {
-                            renderer: $.jqplot.DateAxisRenderer,
-                            tickRenderer: $.jqplot.CanvasAxisTickRenderer,
-                            tickOptions:{
-                                formatString:'%b %#d, %Y %I%p',
-                                angle: -30
-                            },
-                            min: data.min_date,
-                            max: data.max_date,
-                            tickInterval: "1 day",
-                        }
-                    },
-                    highlighter: {
-                        show: true,
-                        sizeAdjust: 7.5,
-                    },
-                    cursor: {show: false}
-                 });
+    function formSubmitHandler(e){
+      e.preventDefault();
+      $(this).unbind('submit');
+      var options = {
+        success: function(data){
+            var isJSON = true;
+            try {
+              $.parseJSON(data);
+            } catch (err) {
+              isJSON = false;
             }
-          };
-          $(this).ajaxForm(options).submit();
-      });
+            if (!isJSON){
+              $('#form-container').replaceWith($(data).find('#form-container'));
+              $('#date-range-form').submit(formSubmitHandler);
+              return;
+            }
+            $('.errorlist').remove();
+            $('#charts').children().remove();
+            var l = new Array();
+            $(data.plots).each(function(index, value){
+                l.push([value[0], value[1]]);
+                });
+            $.jqplot('charts', [l], {
+                title: "Max concurrent calls per hour",
+                axes: {
+                    xaxis: {
+                        renderer: $.jqplot.DateAxisRenderer,
+                        tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                        tickOptions:{
+                            formatString:'%b %#d, %Y %I%p',
+                            angle: -30
+                        },
+                        min: data.min_date,
+                        max: data.max_date,
+                        tickInterval: "1 day",
+                    }
+                },
+                highlighter: {
+                    show: true,
+                    sizeAdjust: 7.5,
+                },
+                cursor: {show: false}
+             });
+        }
+      };
+      $(this).ajaxForm(options).submit();
+    }
+    $('#date-range-form').submit(formSubmitHandler);
    });
 </script>
 {% endblock %}
 
 {% block content_main %}
+<h1>Maximum hourly concurrent calls analytics</h1>
 <div id="form-container">
   <form id="date-range-form" action="" method="post" accept-charset="utf-8">
     {% csrf_token %}
+    <p>Please enter a "from" and "to" date in "MM/DD/YYYY" format to see maximum hourly concurrent calls count in the time selected time frame</p>
     <fieldset>
+      {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
       <div id="from_date_field_container">
         <label>From: </label>{{ form.from_date }}
+        {% if form.errors.from_date %}{{ form.errors.from_date }}{% endif %}
       </div>
       <div id="to_date_field_container">
         <label>To: </label>{{ form.to_date }}
+        {% if form.errors.to_date %}{{ form.errors.to_date }}{% endif %}
       </div>
     </fieldset>
     <p><input type="submit" value="Continue &rarr;"></p>
