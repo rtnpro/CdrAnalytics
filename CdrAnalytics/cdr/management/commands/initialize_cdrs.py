@@ -52,14 +52,14 @@ def generate_n_cdrs(n, start, end):
     for i in range(n):
         if seg_count == seg_size:
             print "Writing records to db..."
-            CallDetailRecord.objects.insert_many(l)
+            CallDetailRecord.objects.bulk_create(l)
             l = []
             seg_count = 0
         l.append(generate_random_cdr(start, end))
         count += 1
         seg_count += 1
         print count
-    CallDetailRecord.objects.insert_many(l)
+    CallDetailRecord.objects.bulk_create(l)
 
 
 class Command(BaseCommand):
@@ -84,4 +84,4 @@ class Command(BaseCommand):
         to_date = datetime.strptime(options.get('to'), DATE_FORMAT)
         from_date = datetime.strptime(options.get('from'), DATE_FORMAT)
         generate_n_cdrs(n, from_date, to_date)
-        
+

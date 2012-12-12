@@ -109,7 +109,6 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
     'south',
     'timedelta',
-    'djangobulk',
     'CdrAnalytics.cdr',
 )
 

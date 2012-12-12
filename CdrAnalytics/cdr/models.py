@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from django.db import models
-from djangobulk.bulk import insert_many, update_many
 from django.utils.translation import ugettext_lazy as _
 from timedelta.fields import TimedeltaField
 from django.db.models import F, Q, Max, Min, Count, Sum
