@@ -12,6 +12,46 @@ def to_roof(t, always=False):
     t = t.strptime(t.strftime('%m/%d/%Y %H'), '%m/%d/%Y %H')
     return t
 
+class PrefixNumbersManager(models.Manager):
+
+    def initial_prefix_numbers(self):
+        import random
+        lb = 1 * 10**5
+        ub = 999999
+        seg_size = 500
+        count = 0
+        l = []
+        lim = 1 * 10 ** 6
+        from ipdb import set_trace; set_trace()
+        for i in range(lim):
+            prefix = random.choice(range(1, ub + 1))
+            print prefix, count
+            if count == seg_size:
+                print "Writing %d data to db..." % seg_size
+                self.bulk_create(l)
+                count = 0
+                l = []
+            l.append(PrefixNumbers(prefix=prefix))
+            count += 1
+        if count:
+            print "Writing %d data to db..." % count
+            self.bulk_create(l)
+
+
+    def find_longest_prefix(self, number):
+        if isinstance(number, int):
+            number = str(number)
+        possible_prefixes = []
+        for i in range(6):
+            possible_prefixes.append(number[:i + 1])
+        max_prefix = PrefixNumbers.objects.filter(prefix__in=possible_prefixes).aggregate(max=Max('prefix'))['max']
+        return max_prefix
+
+class PrefixNumbers(models.Model):
+    prefix = models.CharField(max_length=6)
+
+    objects = PrefixNumbersManager()
+
 
 class CallDetailRecordManager(models.Manager):
 
@@ -20,6 +60,7 @@ class CallDetailRecordManager(models.Manager):
                 start__lt=h).values('id').count()
         start_dict = {}
         end_dict = {}
+        from ipdb import set_trace; set_trace()
         cur_count = max_count = initial_count
         for i in self.filter(start__gte=h, start__lt=h + timedelta(hours=1)
                 ).values('start').iterator():
