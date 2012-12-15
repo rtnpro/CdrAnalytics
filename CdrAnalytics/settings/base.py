@@ -110,6 +110,7 @@ INSTALLED_APPS = (
     'south',
     'timedelta',
     'CdrAnalytics.cdr',
+    'CdrAnalytics.raphycharts'
 )
 
 CALL_STATS_CALC_PERIOD = 3600
